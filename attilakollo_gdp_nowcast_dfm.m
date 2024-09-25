@@ -1,6 +1,6 @@
 close all
 clear all
-addpath('\\srv2\mnb\KKF\_Common\Kozgazdasagi_Modellezesi_Foosztaly\Egyeb\2024\DFM\IRIS-Toolbox-Release-20221026');
+addpath('library');
 iris.startup;
 
 %% read data
@@ -8,15 +8,15 @@ iris.startup;
 close all
 clear all
 
-for ev=2024:2024
-for honap=9:9
+for year=2019:2024
+for month=1:12
 
 
 disp('Loading data ...')
 dm = databank.fromCSV('HU_monthly.csv', 'Dateformat', 'YYYY/MMM',"Delimiter",";");
 dq = databank.fromCSV('HU_quarterly.csv',"Delimiter",";");
 
-negyedev=floor((honap-1)/3)+1;    
+quarter=floor((month-1)/3)+1;    
 
 %% cut data prior 2001 
 tmp = [];
@@ -26,7 +26,7 @@ for i = 1:numel(list_)
 end
 
 % dm = dbclip(dm, mm(2014,1):get(tmp, 'last'));
- dm = dbclip(dm, mm(2014,1):mm(ev,honap));
+ dm = dbclip(dm, mm(2014,1):mm(year,month));
 
 tmp = [];
 list_ = dbnames(dq);
@@ -36,17 +36,17 @@ end
 
 % dq = dbclip(dq, qq(2014,1):get(tmp, 'last'));
 
-if negyedev==1
-    gdphistnegyedev=4;
-    gdphistev=ev-1;
+if quarter==1
+    gdphistquarter=4;
+    gdphistyear=year-1;
 else
-    gdphistnegyedev=negyedev-1;
-    gdphistev=ev;
+    gdphistquarter=quarter-1;
+    gdphistyear=year;
 end
 
-dq = dbclip(dq, qq(2014,1):qq(gdphistev,gdphistnegyedev));
+dq = dbclip(dq, qq(2014,1):qq(gdphistyear,gdphistquarter));
 
-rng_hist = qq(2014,1):qq(gdphistev,gdphistnegyedev); % historical data range for GDP
+rng_hist = qq(2014,1):qq(gdphistyear,gdphistquarter); % historical data range for GDP
 rng_nowcast = rng_hist(1):rng_hist(end)+1; % historical data range for GDP plus nowcast (1 quarter ahead)
 rng_nowcast_graph = rng_hist(5):rng_hist(end)+1; % range for graphs - historical data range for GDP plus nowcast (1 quarter ahead)
 
@@ -75,7 +75,7 @@ dm.L_rujhitel=dm.L_ujhitel-dm.CPI;
 % real variables
 
 
-% compute growth rates (differenciálás)
+% compute growth rates (differentation)
 dm = dbbatch(dm,'D4L_$1','diff(dm.$0,-12)','namefilter','L_(.*)','fresh',false);
 dq = dbbatch(dq,'D4L_$1','diff(dq.$0,-4)','namefilter','L_(.*)','fresh',false);
 
@@ -209,21 +209,21 @@ dfm_input.g_gki_fogy_bizalom_3_OBS = convert(dm_.D4_GKI_fogy_biz, 'q', 'select',
 % plot(rng_nowcast_graph, [dfm_input.g_kulfoldi_teher_1_OBS dfm_input.g_kulfoldi_teher_2_OBS dfm_input.g_kulfoldi_teher_3_OBS], 'linewidth', 1.5);
 % legend( 'GDP', '1st month', '2nd month', '3rd month', 'Box', 'off', 'location', 'southwest')
 % set(gca,'FontSize',14);
-% title('Reál GDP és külföldi tehetforgalom, yoy')
+% title('real GDP and foreign traffic, yoy')
 % 
 % subplot(2,2,3)
 % plot(rng_nowcast_graph, dfm_input.g_GDP_OBS, 'color', 'k', 'linewidth', 2); hold on
 % plot(rng_nowcast_graph, [dfm_input.g_energia_1_OBS dfm_input.g_energia_2_OBS dfm_input.g_energia_3_OBS], 'linewidth', 1.5);
 % legend( 'GDP', '1st month', '2nd month', '3rd month', 'Box', 'off', 'location', 'southwest')
 % set(gca,'FontSize',14);
-% title('Reál GDP és energia felhasználás, yoy')
+% title('real GDP and energy consumption, yoy')
 % 
 % subplot(2,2,4)
 % plot(rng_nowcast_graph, dfm_input.g_GDP_OBS, 'color', 'k', 'linewidth', 2); hold on
 % plot(rng_nowcast_graph, [dfm_input.g_rhitel_1_OBS dfm_input.g_rhitel_2_OBS dfm_input.g_rhitel_3_OBS], 'linewidth', 1.5);
 % legend( 'GDP', '1st month', '2nd month', '3rd month', 'Box', 'off', 'location', 'southwest')
 % set(gca,'FontSize',14);
-% title('Reál GDP és hitelszerződés, yoy')
+% title('real GDP és new credit contracts, yoy')
 
 %return
 %% define model variables (without OBS suffix)
@@ -332,7 +332,7 @@ seged=f0.Mean.g_GDP-f0.Mean.SHK_RES_g_GDP+mean(dq.D4L_GDP);
 out.nowcast = seged;
 out.Mean_D4L_GDP = mean(dq.D4L_GDP);
 out.lambda_g_GDP=summary{1,1};
-seged='dfm_outputs_'+ string(ev)+'_'+string(honap)+".csv";
+seged='dfm_outputs_'+ string(year)+'_'+string(month)+".csv";
 databank.toCSV(out, seged);
 
 end
